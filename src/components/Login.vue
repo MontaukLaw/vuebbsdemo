@@ -38,7 +38,7 @@
 					password: vm.password,
 
 				}
-				console.info(reqParams)
+				//console.info(reqParams)
 				vm.$http.post(
 					//url
 					'/api/BBSDemo/home/user/findUserByUsernameAndPassword',
