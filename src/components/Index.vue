@@ -1,8 +1,9 @@
 <template>
 	<div>
 		欢迎您: {{user_nickname}}
+		{{pageNow}}{{pageQuantity}}
 		<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
-		<button class="btn btn-primary" @click="controll">Click</button>
+		<!-- <button class="btn btn-primary" @click="controll">Click</button> -->
 		<!-- <button @click="showArticles">显示文章</button> -->
 		<div class="container">
 			<table class="table">
@@ -31,11 +32,18 @@
 			<div class="row">
 				<nav aria-label="...">
 					<ul class="pagination">
-
-						<li class="disabled"><a href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a></li>
+						<!-- :class="disabled" -->
+						<li @click="jumpPrePage" :class="prePageBtnActive">
+							<a href="#" aria-label="Previous">
+								<span aria-hidden="true">&laquo;</span>
+							</a>
+						</li>
 						<!-- <li class="active"><a href="#">1 <span class="sr-only">(current)</span></a></li> -->
-						<li v-for="(pageSelect,index) in pages" :class="getPageSelect(pageSelect)"><a href="#" @click="jumpPage(index)">{{pageSelect.pageNumber}}</a></li>
-						<li>
+						<li v-for="(pageSelect,index) in pages" :class="getPageSelect(pageSelect)">
+							<a href="#" @click="jumpPage(index+1)">{{pageSelect.pageNumber}}
+							</a>
+						</li>
+						<li @click="jumpPosPage" :class="posPageBtnActive">
 							<a href="#" aria-label="Next">
 								<span aria-hidden="true">&raquo;</span>
 							</a>
@@ -44,7 +52,9 @@
 				</nav>
 			</div>
 		</div>
-		<article-detail :ifShowMe="ifShowArticleDetail" :article="article" @on-close="closeArticleDetailDialog"></article-detail>
+		<article-detail :ifShowMe="ifShowArticleDetail" :article="article" @on-close="closeArticleDetailDialog">
+
+		</article-detail>
 	</div>
 </template>
 
@@ -52,7 +62,7 @@
 	import ArticleDetail from "./ArticleDetail"
 
 	export default {
-
+		//初始化, 调用基本信息, session, 总页数, 获取第一页文章s
 		created: function() {
 			var vm = this
 			//获取用户session, 将来应该是没有session就滚去login页面.
@@ -64,51 +74,8 @@
 				this.user_nickname = res.data.obj.user_nickname
 			})
 
-			let reqParam = {
-				page: vm.page,
-				rows: vm.rows,
-			}
-			//获取一下文章列表
-			vm.$http.post(
-				//url: bbsdemo/home/article/allArticle
-				'/api/bbsdemo/home/article/allArticle',
-				reqParam, {
-					//模拟表单提交
-					emulateJSON: true
-				}).then((res) => {
-				//this.$set('gridData', res.data)
-				console.info(res.data)
-				if (res.data.success) {
-					this.articles = res.data.obj
-				}
-				//this.user_nickname = res.data.obj.user_nickname
-			})
-			//获取一下文章总数, 用于分页.
-			vm.$http.get(
-				'/api/bbsdemo/home/article/countArticle',
-			).then((res) => {
-				console.info(res.data)
-				if (res.data.success) {
-					vm.total = parseInt(res.data.obj)
-					//这里要做一个分页功能啊.
-					//var pageQuantity = vm.total / vm.rows;
-					var pageData = new Array();
-					for (var i = 0; i < this.pageQuantity; i++) {
-						pageData.push({
-							pageNumber: i + 1,
-							url: i + 1 + '',
-							active: ''
-						})
-						//vm.pages[i].pageNumber = i + 1;
-						//vm.pages[i].url = i + 1 + '';
-					}
-					pageData[0].active = 'active';
-					//console.info(pageData);
-					vm.pages = pageData;
-					//console.info(vm.pages);
-				}
-				//this.user_nickname = res.data.obj.user_nickname
-			})
+			this.getTotalPage()
+			this.ajaxArticleByPage(1)
 
 		},
 		data() {
@@ -141,20 +108,21 @@
 					pageNumber: 1,
 					active: 'active'
 				},
+				prePageBtnActive: 'disabled',
+				posPageBtnActive: '',
 
 			};
 		},
 		methods: {
-			jumpPage(index) {
-				//console.info(url)
+			//复用一下, 根据分页获取文章列表.
+			ajaxArticleByPage(pageIndex) {
 				var vm = this
 				let reqParam = {
-					page: index + 1,
+					page: pageIndex,
 					rows: vm.rows,
 				}
 				//获取一下文章列表
 				vm.$http.post(
-					//url: bbsdemo/home/article/allArticle
 					'/api/bbsdemo/home/article/allArticle',
 					reqParam, {
 						//模拟表单提交
@@ -165,16 +133,88 @@
 					if (res.data.success) {
 						this.articles = res.data.obj
 					}
-					//this.user_nickname = res.data.obj.user_nickname
 				})
+			},
+			getTotalPage() {
+				var vm = this
+				vm.$http.get(
+					'/api/bbsdemo/home/article/countArticle',
+				).then((res) => {
+					console.info(res.data)
+					if (res.data.success) {
+						vm.total = parseInt(res.data.obj)
+						//这里要做一个分页功能啊.
+						//var pageQuantity = vm.total / vm.rows;
+						var pageData = new Array();
+						for (var i = 0; i < this.pageQuantity; i++) {
+							pageData.push({
+								pageNumber: i + 1,
+								url: i + 1 + '',
+								active: ''
+							})
+						}
+						pageData[0].active = 'active';
+						vm.pages = pageData;
+					}
+				})
+			},
+			jumpPrePage() {
+				if (this.pageNow.pageNumber > 1) {
+					this.jumpPage(this.pageNow.pageNumber - 1);
+				}
+				this.disablePrePosBtn();
+			},
+			jumpPosPage() {
+				if (this.pageNow.pageNumber < this.pageQuantity) {
+					this.jumpPage(this.pageNow.pageNumber + 1);
+				} 
+				
+				this.disablePrePosBtn();
 
+			},
+			disablePrePosBtn() {
+				if (this.pageNow.pageNumber == this.pageQuantity) {
+					this.posPageBtnActive = 'disabled'
+				}
+				if (this.pageNow.pageNumber == 1) {
+					this.prePageBtnActive = 'disabled'
+				}
+			},
+			jumpPage(index) {
+				
+				//console.info(url)
+				//var vm = this
+				//let reqParam = {
+				//page: index + 1,
+				//rows: vm.rows,
+				//}
+				////获取一下文章列表
+				//vm.$http.post(
+				////url: bbsdemo/home/article/allArticle
+				//'/api/bbsdemo/home/article/allArticle',
+				//reqParam, {
+				////模拟表单提交
+				//emulateJSON: true
+				//}).then((res) => {
+				////this.$set('gridData', res.data)
+				//console.info(res.data)
+				//if (res.data.success) {
+				//this.articles = res.data.obj
+				//}
+				////this.user_nickname = res.data.obj.user_nickname
+				//})
+				this.ajaxArticleByPage(index);
 				for (var i = 0; i < this.pageQuantity; i++) {
 					this.pages[i].active = ''
 				}
 				//注意, 这里传进来的值, 跟数组的index之间还是有差别的, 其实我就应该弄个index传进来.
-				this.pages[index].active = 'active'
-				this.pageNow = this.pages[index];
-				console.info(this.pageNow);
+				this.pages[index - 1].active = 'active'
+				this.pageNow = this.pages[index - 1];
+				//console.info(this.pageNow);
+				
+				this.prePageBtnActive = ''
+				this.posPageBtnActive = ''
+				this.disablePrePosBtn();
 			},
 
 			showArticles() {
