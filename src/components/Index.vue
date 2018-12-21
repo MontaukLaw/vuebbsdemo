@@ -45,6 +45,7 @@
 					</tr>
 				</tbody>
 			</table>
+			<!-- 分页 -->
 			<div class="row">
 				<nav aria-label="...">
 					<ul class="pagination">
@@ -68,7 +69,7 @@
 				</nav>
 			</div>
 		</div>
-		
+
 		<!-- 编辑文章用的dialog -->
 		<article-detail :ifShowMe="ifShowEditDialog" @on-close="closeEditDialog" :articleReadyToEdit="articleReadyToEdit">
 			<p>
@@ -93,14 +94,14 @@
 				</div>
 			</p>
 		</article-detail>
-		
+
 		<!-- 文章详情 -->
 		<article-detail :ifShowMe="ifShowArticleDetail" :article="article" @on-close="closeArticleDetailDialog">
 			<p>
 				<h4><span class="glyphicon glyphicon-align-right" aria-hidden="true"></span>
 					{{article.article_title}}
 				</h4>
-				{{article.article_create_time }}
+				{{timeTrans(article.article_create_time) }}
 				作者: {{article.user_nickname }}
 				<hr>
 				{{article.article_content}}
@@ -229,7 +230,7 @@
 			};
 		},
 		methods: {
-			updateArticle(){
+			updateArticle() {
 				var vm = this
 				let reqParam = {
 					article_content: this.articleReadyToEdit.article_content,
@@ -325,6 +326,7 @@
 						//这里要做一个分页功能啊.
 						//var pageQuantity = vm.total / vm.rows;
 						var pageData = new Array();
+						console.info(this.pageQuantity)
 						for (var i = 0; i < this.pageQuantity; i++) {
 							pageData.push({
 								pageNumber: i + 1,
@@ -468,7 +470,11 @@
 				return this.articles
 			},
 			pageQuantity: function() {
-				return this.total / this.rows;
+				var intPart = parseInt(this.total / this.rows)
+				if ((this.total % this.rows) != 0) {
+					intPart++
+				}
+				return intPart;
 			},
 			getPageSelect(pageParam) {
 				return function(pageParam) {
