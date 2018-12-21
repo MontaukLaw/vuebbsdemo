@@ -7,16 +7,7 @@
 				<p class="dialog-close" @click="closeMe">
 					<span class="glyphicon glyphicon-share" aria-hidden="true"></span>
 				</p>
-
-				<p>
-					<h4><span class="glyphicon glyphicon-align-right" aria-hidden="true"></span> {{article.article_title}}
-					</h4>
-					{{article.article_create_time }} 作者: {{article.user_nickname }}
-
-					<hr>
-					{{article.article_content}}
-
-				</p>
+				<slot>empty here if you cant see the slot</slot>
 				<!-- <slot>empty here if you cant see the slot </slot> -->
 			</div>
 		</transition>
@@ -32,6 +23,9 @@
 			},
 			article: {
 
+			},
+			inputArticle:{
+				
 			}
 		},
 		data() {
@@ -43,8 +37,7 @@
 			closeMe() {
 				//向上激活一个自定义event
 				this.$emit('on-close')
-			}
-
+			},
 		}
 	}
 </script>

@@ -1,10 +1,22 @@
 <template>
 	<div>
-		欢迎您: {{user_nickname}}
-		{{pageNow}}{{pageQuantity}}
-		<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+	 欢迎您:
+		<!-- : {{user_id}} -->
+		<!-- {{pageNow}}{{pageQuantity}} -->
+		<span class="glyphicon glyphicon-user" aria-hidden="true"></span> {{user_nickname}}
 		<!-- <button class="btn btn-primary" @click="controll">Click</button> -->
 		<!-- <button @click="showArticles">显示文章</button> -->
+		<br>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-10"> </div>
+				<div class="col-md-2">
+					<!-- glyphicon glyphicon-pencil -->
+					<button type="button" class="btn btn-success" @click="addActicleBtn">
+						<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> 发帖</button>
+				</div>
+			</div>
+		</div>
 		<div class="container">
 			<table class="table">
 				<thead>
@@ -23,7 +35,7 @@
 						<td>{{article.article_id}}</td>
 						<td>{{article.article_title}}</td>
 						<!-- <td>{{article.article_content}}</td> -->
-						<td>{{article.article_create_time}}</td>
+						<td>{{timeTrans(article.article_create_time)}}</td>
 						<td>{{article.user_nickname}}</td>
 						<td><button @click="showDetail(article)" type="button" class="btn btn-primary">详情</button></td>
 					</tr>
@@ -53,13 +65,53 @@
 			</div>
 		</div>
 		<article-detail :ifShowMe="ifShowArticleDetail" :article="article" @on-close="closeArticleDetailDialog">
-
+			<p>
+				<h4><span class="glyphicon glyphicon-align-right" aria-hidden="true"></span>
+					{{article.article_title}}
+				</h4>
+				{{article.article_create_time }}
+				作者: {{article.user_nickname }}
+				<hr>
+				{{article.article_content}}
+			</p>
 		</article-detail>
+
+		<!-- 发帖的dialog -->
+		<article-detail :ifShowMe="ifShowAddArticle" @on-close="closeAddArticleDialog" :inputArticle="inputArticle">
+			<p>
+				<form class="form-horizontal">
+					<div class="form-group">
+						<div class="col-sm-10">
+							<input v-model="inputArticle.title" type="text" class="form-control" id="inputTitle" placeholder="标题">
+						</div>
+					</div>
+					<!-- <div class="form-group">
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="inputContent" placeholder="内容">
+						</div>
+					</div> -->
+					<div class="form-group">
+						<div class="col-sm-10">
+							<textarea class="form-control" rows="5" v-model="inputArticle.content" placeholder="内容"></textarea>
+						</div>
+					</div>
+				</form>
+				<div class="form-group">
+					<div class="col-sm-10">
+						<button type="submit" class="btn btn-default" @click="addArticle">
+							<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+							发表</button>
+					</div>
+				</div>
+			</p>
+		</article-detail>
+		{{timeNow}}
 	</div>
 </template>
 
 <script>
 	import ArticleDetail from "./ArticleDetail"
+	import TransTime from "../common/time.js"
 
 	export default {
 		//初始化, 调用基本信息, session, 总页数, 获取第一页文章s
@@ -72,20 +124,26 @@
 				//this.$set('gridData', res.data)
 				//console.info(res.data)
 				this.user_nickname = res.data.obj.user_nickname
+				this.user_id = res.data.obj.user_id
+				this.inputArticle.user_id = res.data.obj.user_id
 			})
 
 			this.getTotalPage()
 			this.ajaxArticleByPage(1)
 
 		},
+
 		data() {
 			return {
 				//当前所有文章的array
 				articles: [],
 				//session
 				user_nickname: '',
+				user_id: 0,
 				//控制文章详情dialog的开关
 				ifShowArticleDetail: false,
+				//控制添加文章dialog的开关
+				ifShowAddArticle: false,
 				//当前要显示详情的文章
 				article: {},
 				//当前文章列表页
@@ -110,10 +168,39 @@
 				},
 				prePageBtnActive: 'disabled',
 				posPageBtnActive: '',
+				inputArticle: {
+					title: '',
+					content: '',
+					user_id: 0
+				},
 
 			};
 		},
 		methods: {
+			ajaxAddArticle(article) {
+				var vm = this
+				let reqParam = {
+					page: article,
+					rows: vm.rows,
+				}
+				//获取一下文章列表
+				vm.$http.post(
+					'/api/bbsdemo/home/article/allArticle',
+					reqParam, {
+						//模拟表单提交
+						emulateJSON: true
+					}).then((res) => {
+					//this.$set('gridData', res.data)
+					console.info(res.data)
+					if (res.data.success) {
+						this.articles = res.data.obj
+					}
+				})
+			},
+			addActicleBtn() {
+				this.ifShowAddArticle = true
+				this.inputArticle = {}
+			},
 			//复用一下, 根据分页获取文章列表.
 			ajaxArticleByPage(pageIndex) {
 				var vm = this
@@ -167,8 +254,8 @@
 			jumpPosPage() {
 				if (this.pageNow.pageNumber < this.pageQuantity) {
 					this.jumpPage(this.pageNow.pageNumber + 1);
-				} 
-				
+				}
+
 				this.disablePrePosBtn();
 
 			},
@@ -181,28 +268,7 @@
 				}
 			},
 			jumpPage(index) {
-				
-				//console.info(url)
-				//var vm = this
-				//let reqParam = {
-				//page: index + 1,
-				//rows: vm.rows,
-				//}
-				////获取一下文章列表
-				//vm.$http.post(
-				////url: bbsdemo/home/article/allArticle
-				//'/api/bbsdemo/home/article/allArticle',
-				//reqParam, {
-				////模拟表单提交
-				//emulateJSON: true
-				//}).then((res) => {
-				////this.$set('gridData', res.data)
-				//console.info(res.data)
-				//if (res.data.success) {
-				//this.articles = res.data.obj
-				//}
-				////this.user_nickname = res.data.obj.user_nickname
-				//})
+
 				this.ajaxArticleByPage(index);
 				for (var i = 0; i < this.pageQuantity; i++) {
 					this.pages[i].active = ''
@@ -211,7 +277,7 @@
 				this.pages[index - 1].active = 'active'
 				this.pageNow = this.pages[index - 1];
 				//console.info(this.pageNow);
-				
+
 				this.prePageBtnActive = ''
 				this.posPageBtnActive = ''
 				this.disablePrePosBtn();
@@ -256,11 +322,20 @@
 			},
 			closeArticleDetailDialog() {
 				this.ifShowArticleDetail = false;
+			},
+			closeAddArticleDialog() {
+				this.ifShowAddArticle = false;
+			},
+			addArticle() {
+				//console.info(this.inputArticle.title + ' ' + this.inputArticle.content + ' ' + this.user_id);
+				var article = {
 
+				}
+				this.ajaxAddArticle();
 			}
 		},
 		components: {
-			ArticleDetail
+			ArticleDetail,
 		},
 		computed: {
 			getArticleID: function() {
@@ -282,10 +357,17 @@
 					}
 					return '';
 				}
+			},
+			timeTrans: function(time) {
+				return function(time) {
+					return TransTime.transTimeFunc.transTime(time)
+				}
+			},
+			timeNow:function(){
+					return TransTime.transTimeFunc.getTimeNow()
 			}
 
 		}
-
 	}
 </script>
 
