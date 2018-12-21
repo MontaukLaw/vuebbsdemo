@@ -1,6 +1,6 @@
 <template>
 	<div>
-	 欢迎您:
+		欢迎您:
 		<!-- : {{user_id}} -->
 		<!-- {{pageNow}}{{pageQuantity}} -->
 		<span class="glyphicon glyphicon-user" aria-hidden="true"></span> {{user_nickname}}
@@ -180,12 +180,13 @@
 			ajaxAddArticle(article) {
 				var vm = this
 				let reqParam = {
-					page: article,
-					rows: vm.rows,
+					article_content: article.article_content,
+					article_title: article.article_title,
+					author_id: this.user_id
 				}
 				//获取一下文章列表
 				vm.$http.post(
-					'/api/bbsdemo/home/article/allArticle',
+					'/api/bbsdemo/home/article/addArticle',
 					reqParam, {
 						//模拟表单提交
 						emulateJSON: true
@@ -193,7 +194,12 @@
 					//this.$set('gridData', res.data)
 					console.info(res.data)
 					if (res.data.success) {
-						this.articles = res.data.obj
+						//console.info(res.data)
+						alert('发帖成功')
+						this.closeAddArticleDialog()
+						//刷新一下
+						this.getTotalPage()
+						this.ajaxArticleByPage()
 					}
 				})
 			},
@@ -329,9 +335,10 @@
 			addArticle() {
 				//console.info(this.inputArticle.title + ' ' + this.inputArticle.content + ' ' + this.user_id);
 				var article = {
-
+					article_content:this.inputArticle.content,
+					article_title: this.inputArticle.title ,
 				}
-				this.ajaxAddArticle();
+				this.ajaxAddArticle(article);
 			}
 		},
 		components: {
@@ -363,8 +370,8 @@
 					return TransTime.transTimeFunc.transTime(time)
 				}
 			},
-			timeNow:function(){
-					return TransTime.transTimeFunc.getTimeNow()
+			timeNow: function() {
+				return TransTime.transTimeFunc.getTimeNow()
 			}
 
 		}
