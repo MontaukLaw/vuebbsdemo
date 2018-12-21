@@ -37,7 +37,11 @@
 						<!-- <td>{{article.article_content}}</td> -->
 						<td>{{timeTrans(article.article_create_time)}}</td>
 						<td>{{article.user_nickname}}</td>
-						<td><button @click="showDetail(article)" type="button" class="btn btn-primary">详情</button></td>
+						<td><button @click="showDetail(article)" type="button" class="btn btn-primary">详情</button>
+							<button @click="deleteArticleConfirm(article)" type="button" class="btn btn-warning">删除</button>
+							<button @click="edit(article)" type="button" class="btn btn-primary">修改</button>
+						</td>
+
 					</tr>
 				</tbody>
 			</table>
@@ -64,6 +68,33 @@
 				</nav>
 			</div>
 		</div>
+		
+		<!-- 编辑文章用的dialog -->
+		<article-detail :ifShowMe="ifShowEditDialog" @on-close="closeEditDialog" :articleReadyToEdit="articleReadyToEdit">
+			<p>
+				<form class="form-horizontal">
+					<div class="form-group">
+						<div class="col-sm-10">
+							<input v-model="articleReadyToEdit.article_title" type="text" class="form-control" id="inputTitle" placeholder="标题">
+						</div>
+					</div>
+					<div class="form-group">
+						<div class="col-sm-10">
+							<textarea class="form-control" rows="5" v-model="articleReadyToEdit.article_content" placeholder="内容"></textarea>
+						</div>
+					</div>
+				</form>
+				<div class="form-group">
+					<div class="col-sm-10">
+						<button type="submit" class="btn btn-default" @click="updateArticle">
+							<span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
+							更新</button>
+					</div>
+				</div>
+			</p>
+		</article-detail>
+		
+		<!-- 文章详情 -->
 		<article-detail :ifShowMe="ifShowArticleDetail" :article="article" @on-close="closeArticleDetailDialog">
 			<p>
 				<h4><span class="glyphicon glyphicon-align-right" aria-hidden="true"></span>
@@ -105,6 +136,12 @@
 				</div>
 			</p>
 		</article-detail>
+
+		<delete-confirm-dialog :article="article" :ifShowMe="ifShowDeleteConfirm" @on-close="closeDeleteConfirmDialog">
+			<h4>确定要删除么? </h4>
+			<button @click="deleteArticle(article)" type="button" class="btn btn-danger">确定</button>
+			<!-- <button @click="deleteArticle(article)" type="button" class="btn btn-success">取消</button> -->
+		</delete-confirm-dialog>
 		{{timeNow}}
 	</div>
 </template>
@@ -112,6 +149,7 @@
 <script>
 	import ArticleDetail from "./ArticleDetail"
 	import TransTime from "../common/time.js"
+	import DeleteConfirmDialog from "./dialogs/DeleteConfirmDialog"
 
 	export default {
 		//初始化, 调用基本信息, session, 总页数, 获取第一页文章s
@@ -144,6 +182,10 @@
 				ifShowArticleDetail: false,
 				//控制添加文章dialog的开关
 				ifShowAddArticle: false,
+				//删除确认对话框
+				ifShowDeleteConfirm: false,
+				//是否显示editdialog的开关
+				ifShowEditDialog: false,
 				//当前要显示详情的文章
 				article: {},
 				//当前文章列表页
@@ -162,21 +204,65 @@
 						url: '2'
 					}
 				],
+				//当前的页面信息
 				pageNow: {
 					pageNumber: 1,
 					active: 'active'
 				},
+				//往前翻页的按钮开关
 				prePageBtnActive: 'disabled',
+				//往后翻页的按钮
 				posPageBtnActive: '',
+				//这个类似乎没有用到
 				inputArticle: {
 					title: '',
 					content: '',
 					user_id: 0
 				},
+				articleReadyToDel: {
+
+				},
+				articleReadyToEdit: {
+
+				},
 
 			};
 		},
 		methods: {
+			updateArticle(){
+				var vm = this
+				let reqParam = {
+					article_content: this.articleReadyToEdit.article_content,
+					article_title: this.articleReadyToEdit.article_title,
+					article_id: this.articleReadyToEdit.article_id,
+				}
+				vm.$http.post(
+					'/api/bbsdemo/home/article/updateArticle',
+					reqParam, {
+						//模拟表单提交
+						emulateJSON: true
+					}).then((res) => {
+					//this.$set('gridData', res.data)
+					console.info(res.data)
+					if (res.data.success) {
+						//console.info(res.data)
+						alert('发帖成功')
+						this.closeEditDialog()
+						//刷新一下
+						this.getTotalPage()
+						this.ajaxArticleByPage()
+					}
+				})
+			},
+			closeEditDialog() {
+				this.ifShowEditDialog = false;
+			},
+			edit(article) {
+				//console.info(article.article_id)
+				this.articleReadyToEdit = article
+				console.info(this.articleReadyToEdit)
+				this.ifShowEditDialog = true;
+			},
 			ajaxAddArticle(article) {
 				var vm = this
 				let reqParam = {
@@ -332,17 +418,46 @@
 			closeAddArticleDialog() {
 				this.ifShowAddArticle = false;
 			},
+			closeDeleteConfirmDialog() {
+				this.ifShowDeleteConfirm = false;
+			},
 			addArticle() {
 				//console.info(this.inputArticle.title + ' ' + this.inputArticle.content + ' ' + this.user_id);
 				var article = {
-					article_content:this.inputArticle.content,
-					article_title: this.inputArticle.title ,
+					article_content: this.inputArticle.content,
+					article_title: this.inputArticle.title,
 				}
 				this.ajaxAddArticle(article);
+			},
+			deleteArticleConfirm(article) {
+				this.articleReadyToDel = article
+				this.ifShowDeleteConfirm = true
+			},
+			deleteArticle() {
+				var vm = this
+				let param = {
+					article_id: this.articleReadyToDel.article_id,
+				}
+				console.info('article_id is '.article_id)
+				vm.$http.post(
+					'/api/bbsdemo/home/article/deleteArticle', param, {
+						//模拟表单提交
+						emulateJSON: true
+					}).then((res) => {
+					if (res.data.success) {
+						this.refreshPage()
+						this.closeDeleteConfirmDialog()
+					}
+				})
+			},
+			refreshPage() {
+				this.getTotalPage()
+				this.ajaxArticleByPage(this.pageNow.pageNumber)
 			}
 		},
 		components: {
 			ArticleDetail,
+			DeleteConfirmDialog
 		},
 		computed: {
 			getArticleID: function() {
@@ -372,7 +487,8 @@
 			},
 			timeNow: function() {
 				return TransTime.transTimeFunc.getTimeNow()
-			}
+			},
+
 
 		}
 	}
